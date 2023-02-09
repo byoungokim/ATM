@@ -16,6 +16,7 @@ AtmController::AtmController(bank::BankApiSharedPtr bankApiWrapper){
   this->state_ = AtmState::BOOTING;
   if(this->checkCardSlot()) this->reportCriticalError("Atm Machine is not working due to non returned card");
   this->state_ = AtmState::WAITING;
+  this->account_ = "";
 }
 
 /**
@@ -104,6 +105,7 @@ bool AtmController::ejectCard() {
   }
   // assume the card would be always ejected
   this->cardInserted_ = false;
+  this->account_ = "";
   if(checkCardSlot()) {
     this->reportCriticalError("The card remains in the slot, stop all the following job for preventing the security issue");
   }
@@ -130,6 +132,24 @@ void AtmController::fillTheCashDispenser(int dollars) {
   // fill the cash dispenser
 }
 
+vector<std::string> AtmController::showAccounts(){
+  if(this->state_ == AtmState::ERROR) return vector<string>{};
+  if(this->state_ != AtmState::AUTHENTICATED) return vector<string>{};
+  if(!this->bankApiWrapper_) {
+    this->reportCriticalError("Please restart the machine");
+    return vector<string>{};
+  }
+  if(!this->bankApiWrapper_->checkConnection()) {
+    return vector<string>{}; // error case
+  }
+  return this->bankApiWrapper_->listAccount();
+}
+
+bool AtmController::selectAccount(std::string account){
+  this->account_ = account;
+  return true;
+}
+
 /**
  * @brief Deposit money
  * 
@@ -137,9 +157,10 @@ void AtmController::fillTheCashDispenser(int dollars) {
  * @param dollars The amount of dollar loaded on the ATM
  * @return int The balance of a given account after deposit, -1 if there is an error
  */
-int AtmController::deposit(string account, int dollars) {
+int AtmController::deposit(int dollars) {
   if(this->state_ == AtmState::ERROR) return -1;
   if(this->state_ != AtmState::AUTHENTICATED) return -1;
+  if(this->account_.length() == 0) return -1;
   if(!this->bankApiWrapper_) {
     this->reportCriticalError("Please restart the machine");
     return -1;
@@ -152,7 +173,7 @@ int AtmController::deposit(string account, int dollars) {
     this->reportError("the user confirmation on the count is not correct");
     return -1; // error case
   }
-  int balance = this->bankApiWrapper_->deposit(account, dollars);
+  int balance = this->bankApiWrapper_->deposit(this->account_, dollars);
   if(balance== -1) {
     return -1;
   }
@@ -165,30 +186,33 @@ int AtmController::deposit(string account, int dollars) {
  * @param account the account number
  * @return int the balance of a given account
  */
-int AtmController::getBalance(string account){
+int AtmController::getBalance(){
   if(this->state_ == AtmState::ERROR) return -1;
   if(this->state_ != AtmState::AUTHENTICATED) return -1;
+  if(this->account_.length() == 0) return -1;
   if(!this->bankApiWrapper_) {
     this->reportCriticalError("Please restart the machine");
     return -1;
   }
-  int balance = this->bankApiWrapper_->getBalance(account);
+
+  int balance = this->bankApiWrapper_->getBalance(this->account_);
   if(balance < 0) { // assume there is no negative balance
     this->reportError("Account does not exist");
+    return -1;
   }
-  return this->bankApiWrapper_->getBalance(account);
+  return balance;
 }
 
 /**
  * @brief Withdraw money from the account
  * 
- * @param account the account number
  * @param dollars the amount of dollars to be withdrawed
  * @return int the remained balance, -1 if there is any error
  */
-int AtmController::withdraw(string account, int dollars){
+int AtmController::withdraw(int dollars){
   if(this->state_ == AtmState::ERROR) return -1;
   if(this->state_ != AtmState::AUTHENTICATED) return -1;
+  if(this->account_.length() == 0) return -1;
   if(!this->bankApiWrapper_) {
     this->reportCriticalError("Please restart the machine");
     return -1;
@@ -197,11 +221,11 @@ int AtmController::withdraw(string account, int dollars){
     this->reportError("Not enough cash in the bin");
     return -1;
   }
-  if(this->bankApiWrapper_->getBalance(account) < dollars) {
+  if(this->bankApiWrapper_->getBalance(this->account_) < dollars) {
     this->reportError("Not enough balance");
     return -1;
   }
-  int remained = this->bankApiWrapper_->withdraw(account, dollars);
+  int remained = this->bankApiWrapper_->withdraw(this->account_, dollars);
   if (remained == -1){
     this->reportError("Error on the withdrawl");
     return -1;

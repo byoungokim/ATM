@@ -7,6 +7,7 @@
 #include "bank/bank_api.hpp"
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace atm{
 enum AtmState {
@@ -24,6 +25,8 @@ private:
 
   int state_;
   int dollars_;
+  std::string account_;
+
   bool checkCardSlot();
   int readCardNumber();
   void reportCriticalError(std::string message);
@@ -36,9 +39,11 @@ public:
   int insertCard();
   bool checkPinNumber(int cardNum, int pinNumber);
   bool ejectCard();
-  int getBalance(std::string account);
-  int deposit(std::string account, int dollars);
-  int withdraw(std::string account, int dollars);
+  std::vector<std::string> showAccounts();
+  bool selectAccount(std::string account);
+  int getBalance();
+  int deposit(int dollars);
+  int withdraw(int dollars);
 };
 }
 #endif // ATM_ATM_CONTROLLER_HPP_

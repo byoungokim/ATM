@@ -40,32 +40,55 @@ TEST(AtmControllerTest, ejectCardPositive) {
   EXPECT_FALSE(controller.ejectCard());
 }
 
+TEST(AtmControllerTest, showAccountsNegative) {
+  AtmController controller(nullptr);
+  EXPECT_EQ(controller.showAccounts().size(), 0);
+
+  BankApiSharedPtr api = std::make_shared<BankApi>();
+  AtmController controller2(api);
+  EXPECT_EQ(controller2.showAccounts().size(), 0);
+}
+
+TEST(AtmControllerTest, showAccountsPositive) {
+  BankApiSharedPtr api = std::make_shared<BankApi>();
+  AtmController controller(api);
+  EXPECT_EQ(controller.insertCard(),1);
+  EXPECT_TRUE(controller.checkPinNumber(1, 1111));
+  EXPECT_EQ(controller.showAccounts().size(), 2);
+}
+
 TEST(AtmControllerTest, getBalancePositive){
   BankApiSharedPtr api = std::make_shared<BankApi>();
   AtmController controller(api);
   EXPECT_EQ(controller.insertCard(),1);
   EXPECT_TRUE(controller.checkPinNumber(1, 1111));
-  EXPECT_EQ(controller.getBalance("account1"), 20);
-  EXPECT_EQ(controller.getBalance("account2"), 50);
+  EXPECT_TRUE(controller.selectAccount("account1"));
+  EXPECT_EQ(controller.getBalance(), 20);
+  EXPECT_TRUE(controller.selectAccount("account2"));
+  EXPECT_EQ(controller.getBalance(), 50);
 }
 
 TEST(AtmControllerTest, getBalanceNegative) {
   AtmController controller(nullptr);
-  EXPECT_EQ(controller.getBalance("account1"), -1);
+  EXPECT_EQ(controller.getBalance(), -1);
 
   BankApiSharedPtr api = std::make_shared<BankApi>();
   AtmController controller2(api);
-  EXPECT_EQ(controller2.getBalance("account3"), -1);
+  controller2.selectAccount("account3");
+  EXPECT_EQ(controller2.getBalance(), -1);
 }
 
 TEST(AtmControllerTest, withdrawNegative){
   AtmController controller(nullptr);
-  EXPECT_EQ(controller.withdraw("account1", 20), -1);
+  controller.selectAccount("account1");
+  EXPECT_EQ(controller.withdraw(20), -1);
 
   BankApiSharedPtr api = std::make_shared<BankApi>();
   AtmController controller2(api);
-  EXPECT_EQ(controller2.withdraw("account1", 30), -1);
-  EXPECT_EQ(controller2.withdraw("account3", 10), -1);
+  controller2.selectAccount("account1");
+  EXPECT_EQ(controller2.withdraw(30), -1);
+  controller2.selectAccount("account3");
+  EXPECT_EQ(controller2.withdraw(10), -1);
 }
 
 TEST(AtmControllerTest, withdrawPositive){
@@ -73,18 +96,22 @@ TEST(AtmControllerTest, withdrawPositive){
   AtmController controller(api);
   EXPECT_EQ(controller.insertCard(),1);
   EXPECT_TRUE(controller.checkPinNumber(1, 1111));
-  EXPECT_EQ(controller.withdraw("account1", 10), 10);
-  EXPECT_EQ(controller.withdraw("account1", 10), 0);
-  EXPECT_EQ(controller.withdraw("account2", 10), 40);
+  EXPECT_TRUE(controller.selectAccount("account1"));
+  EXPECT_EQ(controller.withdraw(10), 10);
+  EXPECT_EQ(controller.withdraw(10), 0);
+  EXPECT_TRUE(controller.selectAccount("account2")); 
+  EXPECT_EQ(controller.withdraw(10), 40);
 }
 
 TEST(AtmControllerTest, depositNegative){
   AtmController controller(nullptr);
-  EXPECT_EQ(controller.deposit("account1", 10), -1);
+  controller.selectAccount("account1");
+  EXPECT_EQ(controller.deposit(10), -1);
 
   BankApiSharedPtr api = std::make_shared<BankApi>();
   AtmController controller2(api);
-  EXPECT_EQ(controller2.deposit("account3", 30), -1);
+  controller2.selectAccount("account3");
+  EXPECT_EQ(controller2.deposit(30), -1);
 }
 
 TEST(AtmControllerTest, depositPositive){
@@ -92,8 +119,10 @@ TEST(AtmControllerTest, depositPositive){
   AtmController controller(api);
   EXPECT_EQ(controller.insertCard(),1);
   EXPECT_TRUE(controller.checkPinNumber(1, 1111));
-  EXPECT_EQ(controller.deposit("account1", 10), 30);
-  EXPECT_EQ(controller.deposit("account2", 10), 60);
+  EXPECT_TRUE(controller.selectAccount("account1"));
+  EXPECT_EQ(controller.deposit(10), 30);
+  EXPECT_TRUE(controller.selectAccount("account2"));
+  EXPECT_EQ(controller.deposit(10), 60);
 }
 
 }
