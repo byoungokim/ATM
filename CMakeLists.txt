@@ -14,6 +14,16 @@ add_library(
   src/bank/bank_api.cpp
 )
 
+add_library(
+  atm
+  src/atm/atm_controller.cpp
+)
+
+target_link_libraries(
+  atm
+  bank
+)
+
 enable_testing()
 
 add_executable(
@@ -27,4 +37,17 @@ target_link_libraries(
   GTest::gtest_main
 )
 
+add_executable(
+  atm_test
+  test/atm_controller.cpp
+)
+target_link_libraries(
+  atm_test
+  bank
+  atm
+  GTest::gtest_main
+)
+
 gtest_discover_tests(bank_test)
+
+gtest_discover_tests(atm_test)
